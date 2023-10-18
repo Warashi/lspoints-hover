@@ -13,14 +13,14 @@ on:
     paths:
       - '**/*.ts'
       - 'deno.jsonc'
-      - '.github/workflows/check.yml'
+      - '.github/workflows/check.yaml'
   pull_request:
     branches:
       - main
     paths:
       - '**/*.ts'
       - 'deno.jsonc'
-      - '.github/workflows/check.yml'
+      - '.github/workflows/check.yaml'
 
 jobs:
   check:
