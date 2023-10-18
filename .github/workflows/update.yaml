@@ -1,0 +1,42 @@
+name: update-deno-dependencies
+
+env:
+  DENO_VERSION: 1.x
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 0"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: 'blob:none'
+          persist-credentials: true
+
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: ${{ env.DENO_VERSION }}
+
+      - name: Update dependencies
+        run: deno task update
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "build(deps): update deno dependencies"
+          title: "build(deps): update deno dependencies"
+          body: >
+            Automated updates by [deno-molt](https://github.com/hasundue/deno-molt)
+            and [create-pull-request](https://github.com/peter-evans/create-pull-request)
+            GitHub action
+          branch: update-deno-dependencies
+          author: GitHub <noreply@github.com>
+          assignees: Warashi
+          labels: dependencies,deno
+          reviewers: Warashi
+          delete-branch: true
