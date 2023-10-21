@@ -1,0 +1,76 @@
+---
+name: lspoints-hover
+description: Hover extension for lspoints
+---
+
+=pod
+
+=head1 lspoints-hover X<lspoints-hover>
+
+=head2 overview X<lspoints-hover-overview>
+
+This extension provides a hover handler for L<lspoints|https://github.com/kuuote/lspoints>.
+It will display the documentation for the symbol under the cursor.
+Only neovim is supported from now on for a while.
+
+=head2 options X<lspoints-hover-options>
+
+The options for this extension.
+Default values is the default value of L<vim.lsp.util.open_floating_preview()|https://neovim.io/doc/user/lsp.html#vim.lsp.util.open_floating_preview()>.
+
+=head3 title X<lspoints-hover-options-title>
+
+The title of the floating window.
+
+=head3 border X<lspoints-hover-options-border>
+
+The border style of the floating window.
+
+=head3 zindex X<lspoints-hover-options-zindex>
+
+The zindex of the floating window.
+
+=head3 wrap X<lspoints-hover-options-wrap>
+
+Whether to wrap the text in the floating window.
+
+=head3 max_width X<lspoints-hover-options-max_width>
+
+The maximum width of the floating window.
+
+=head3 max_height X<lspoints-hover-options-max_height>
+
+The maximum height of the floating window.
+
+=head3 offset_x X<lspoints-hover-options-offset_x>
+
+The offset x of the floating window.
+
+=head3 offset_y X<lspoints-hover-options-offset_y>
+
+The offset y of the floating window.
+
+=head2 example X<lspoints-hover-example>
+
+  " load hover with other extensions
+  call lspoints#load_extensions(['hover'])
+
+  function s:lspoints_on_attach() abort
+    nnoremap <buffer> K
+      \ <Cmd>call denops#request(
+      \   'lspoints',
+      \   'executeCommand',
+      \   [
+      \     'hover',
+      \     'execute',
+      \     {
+      \       'title': 'Hover',
+      \       'border': 'single',
+      \     }
+      \   ]
+      \ )<CR>
+  endfunction
+
+  autocmd User LspointsAttach:* call s:lspoints_on_attach()
+
+=cut
