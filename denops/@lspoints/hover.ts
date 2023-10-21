@@ -18,10 +18,26 @@ function splitLines(s: string): string[] {
     .filter(Boolean);
 }
 
+const isOption = u.isOptionalOf(u.isObjectOf({
+  title: u.isOptionalOf(u.isString),
+  border: u.isOptionalOf(u.isString),
+  zindex: u.isOptionalOf(u.isNumber),
+  wrap: u.isOptionalOf(u.isBoolean),
+  max_width: u.isOptionalOf(u.isNumber),
+  max_height: u.isOptionalOf(u.isNumber),
+  offset_x: u.isOptionalOf(u.isNumber),
+  offset_y: u.isOptionalOf(u.isNumber),
+}));
+
 export class Extension extends BaseExtension {
   initialize(denops: Denops, lspoints: Lspoints) {
     lspoints.defineCommands("hover", {
-      execute: async () => {
+      execute: async (opts?: unknown) => {
+        if (!isOption(opts)) {
+          denops.cmd(`echoerr 'Invalid option'`);
+          return;
+        }
+
         const clients = lspoints.getClients(await fn.bufnr(denops))
           .filter((c) => c.serverCapabilities.hoverProvider !== undefined);
         if (clients.length === 0) {
@@ -71,8 +87,8 @@ export class Extension extends BaseExtension {
 
         await denops.call(
           "luaeval",
-          `vim.lsp.util.open_floating_preview(_A[1], _A[2], { border = "single", title = "Hover" })`,
-          [lines, format],
+          `vim.lsp.util.open_floating_preview(_A[1], _A[2], _A[3])`,
+          [lines, format, opts ?? {}],
         );
       },
     });
