@@ -1,0 +1,86 @@
+*lspoints-hover.txt*                             Hover extension for lspoints
+=============================================================================
+lspoints-hover ~
+                                                             *lspoints-hover*
+
+overview ~
+                                                    *lspoints-hover-overview*
+
+This extension provides a hover handler for lspoints |lspoints|.
+It will display the documentation for the symbol under the cursor.
+Only neovim is supported from now on for a while.
+
+options ~
+                                                     *lspoints-hover-options*
+
+The options for this extension.
+Default values is the default value of |vim.lsp.util.open_floating_preview()|.
+
+title ~
+                                               *lspoints-hover-options-title*
+
+The title of the floating window.
+
+border ~
+                                              *lspoints-hover-options-border*
+
+The border style of the floating window.
+
+zindex ~
+                                              *lspoints-hover-options-zindex*
+
+The zindex of the floating window.
+
+wrap ~
+                                                *lspoints-hover-options-wrap*
+
+Whether to wrap the text in the floating window.
+
+max_width ~
+                                           *lspoints-hover-options-max_width*
+
+The maximum width of the floating window.
+
+max_height ~
+                                          *lspoints-hover-options-max_height*
+
+The maximum height of the floating window.
+
+offset_x ~
+                                            *lspoints-hover-options-offset_x*
+
+The offset x of the floating window.
+
+offset_y ~
+                                            *lspoints-hover-options-offset_y*
+
+The offset y of the floating window.
+
+example ~
+                                                     *lspoints-hover-example*
+
+>
+  " load hover with other extensions
+  call lspoints#load_extensions(['hover'])
+
+  function s:lspoints_on_attach() abort
+    nnoremap <buffer> K
+      \ <Cmd>call denops#request(
+      \   'lspoints',
+      \   'executeCommand',
+      \   [
+      \     'hover',
+      \     'execute',
+      \     {
+      \       'title': 'Hover',
+      \       'border': 'single',
+      \     }
+      \   ]
+      \ )<CR>
+  endfunction
+
+  autocmd User LspointsAttach:* call s:lspoints_on_attach()
+<
+
+
+vim:tw=78:ts=8:noet:ft=help:norl:
