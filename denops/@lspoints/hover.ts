@@ -10,6 +10,7 @@ import {
   OffsetEncoding,
 } from "https://deno.land/x/denops_lsputil@v0.9.0/mod.ts";
 import * as fn from "https://deno.land/x/denops_std@v5.0.1/function/mod.ts";
+import { echo } from "https://deno.land/x/denops_std@v5.0.1/helper/mod.ts";
 
 function splitLines(s: string): string[] {
   return s.replaceAll(/\r\n?/g, "\n")
@@ -34,14 +35,14 @@ export class Extension extends BaseExtension {
     lspoints.defineCommands("hover", {
       execute: async (opts?: unknown) => {
         if (!isOption(opts)) {
-          denops.cmd(`echoerr 'Invalid option'`);
+          echo(denops, `Invalid option: ${JSON.stringify(opts)}`);
           return;
         }
 
         const clients = lspoints.getClients(await fn.bufnr(denops))
           .filter((c) => c.serverCapabilities.hoverProvider !== undefined);
         if (clients.length === 0) {
-          denops.cmd(`echoerr 'Hover is not supported'`);
+          echo(denops, "Hover is not supported");
           return;
         }
         const client = clients[0];
@@ -55,7 +56,7 @@ export class Extension extends BaseExtension {
           params,
         ) as LSP.Hover | null;
         if (result === null) {
-          denops.cmd(`echoerr 'No information'`);
+          echo(denops, "No information");
           return;
         }
         const contents = result.contents;
