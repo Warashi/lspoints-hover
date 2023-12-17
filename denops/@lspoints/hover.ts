@@ -9,8 +9,8 @@ import {
   makePositionParams,
   OffsetEncoding,
 } from "https://deno.land/x/denops_lsputil@v0.9.1/mod.ts";
-import * as fn from "https://deno.land/x/denops_std@v5.1.0/function/mod.ts";
-import { echo } from "https://deno.land/x/denops_std@v5.1.0/helper/mod.ts";
+import * as fn from "https://deno.land/x/denops_std@v5.2.0/function/mod.ts";
+import { echo } from "https://deno.land/x/denops_std@v5.2.0/helper/mod.ts";
 
 function splitLines(s: string): string[] {
   return s.replaceAll(/\r\n?/g, "\n")
