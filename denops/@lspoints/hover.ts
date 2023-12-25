@@ -8,7 +8,7 @@ import { u } from "https://deno.land/x/lspoints@v0.0.4/deps/unknownutil.ts";
 import {
   makePositionParams,
   OffsetEncoding,
-} from "https://deno.land/x/denops_lsputil@v0.9.1/mod.ts";
+} from "https://deno.land/x/denops_lsputil@v0.9.2/mod.ts";
 import * as fn from "https://deno.land/x/denops_std@v5.2.0/function/mod.ts";
 import { echo } from "https://deno.land/x/denops_std@v5.2.0/helper/mod.ts";
 
