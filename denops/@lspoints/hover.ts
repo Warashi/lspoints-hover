@@ -1,14 +1,14 @@
 import {
   BaseExtension,
   Lspoints,
-} from "https://deno.land/x/lspoints@v0.0.7/interface.ts";
-import { Denops } from "https://deno.land/x/lspoints@v0.0.7/deps/denops.ts";
-import { LSP } from "https://deno.land/x/lspoints@v0.0.7/deps/lsp.ts";
-import { u } from "https://deno.land/x/lspoints@v0.0.7/deps/unknownutil.ts";
+} from "https://deno.land/x/lspoints@v0.1.1/interface.ts";
+import { Denops } from "https://deno.land/x/lspoints@v0.1.1/deps/denops.ts";
+import { LSP } from "https://deno.land/x/lspoints@v0.1.1/deps/lsp.ts";
+import { u } from "https://deno.land/x/lspoints@v0.1.1/deps/unknownutil.ts";
 import {
   makePositionParams,
   OffsetEncoding,
-} from "https://deno.land/x/denops_lsputil@v0.9.5/mod.ts";
+} from "https://deno.land/x/denops_lsputil@v0.10.1/mod.ts";
 import * as fn from "https://deno.land/x/denops_std@v6.5.1/function/mod.ts";
 import { echo } from "https://deno.land/x/denops_std@v6.5.1/helper/mod.ts";
 
