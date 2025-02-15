@@ -181,25 +181,53 @@ export class Extension extends BaseExtension {
           content.split("\n").length,
         );
 
-        const window = await createPopup(denops, content, {
-          relative: "cursor",
-          width,
-          height,
-          title: opts.title,
-          border: opts.border,
-          zindex: opts.zindex,
-          row: opts.offset_y ?? 2,
-          col: opts.offset_x ?? 2,
-        });
+        const offset_y = opts.offset_y ?? denops.meta.host == "nvim" ? 2 : 1;
+        const offset_x = opts.offset_x ?? denops.meta.host == "nvim" ? 2 : 1;
+
+        // Calculate the row and col for the popup window
+        // If the host is neovim, the row and col are relative to the cursor position
+        // If the host is vim, the row and col are some string like "cursor+1" or "cursor-1"
+        const row = denops.meta.host ==
+            "nvim"
+          ? offset_y
+          : offset_y >= 0
+          ? `cursor+${offset_y}`
+          : `cursor${offset_y}`;
+        const col = denops.meta.host ==
+            "nvim"
+          ? offset_x
+          : offset_x >= 0
+          ? `cursor+${offset_x}`
+          : `cursor${offset_x}`;
+
+        const window = await createPopup(
+          denops,
+          content,
+          {
+            relative: "cursor",
+            width,
+            height,
+            title: opts.title,
+            border: opts.border,
+            zindex: opts.zindex,
+            // workaround for vim
+            row: row as unknown as number,
+            col: col as unknown as number,
+          } as const satisfies popup.OpenOptions,
+        );
 
         const id = lambda.register(denops, window.close, { once: true });
-        await autocmd.define(
-          denops,
-          "CursorMoved",
-          "*",
-          expr`eval(denops#request(${denops.name}, ${id}, []))`,
-          { once: true },
-        );
+
+        // workaround for vim
+        // without this setTimeout, the popup window will be closed immediately
+        setTimeout(() =>
+          autocmd.define(
+            denops,
+            "CursorMoved",
+            "*",
+            expr`eval(denops#request(${denops.name}, ${id}, []))`,
+            { once: true },
+          ), 100);
       },
     });
   }
