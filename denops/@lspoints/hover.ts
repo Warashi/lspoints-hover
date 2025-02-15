@@ -1,10 +1,6 @@
-import {
-  BaseExtension,
-  Lspoints,
-  Client,
-} from "jsr:@kuuote/lspoints@0.1.1";
+import { BaseExtension, Client, Lspoints } from "jsr:@kuuote/lspoints@0.1.1";
 import { Denops } from "jsr:@denops/std@7.4.0";
-import { is, as, ensure } from "jsr:@core/unknownutil@4.3.0";
+import { as, ensure, is } from "jsr:@core/unknownutil@4.3.0";
 import {
   makePositionParams,
   OffsetEncoding,
@@ -29,8 +25,17 @@ const isBorder = is.UnionOf([
   is.LiteralOf("single"),
   is.LiteralOf("double"),
   is.LiteralOf("rounded"),
-  is.TupleOf([is.String, is.String, is.String, is.String, is.String, is.String, is.String, is.String]),
-])
+  is.TupleOf([
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+  ]),
+]);
 
 const isOption = as.Optional(is.ObjectOf({
   title: as.Optional(is.String),
@@ -48,8 +53,8 @@ const isMarkedString = is.UnionOf([
   is.ObjectOf({
     language: is.String,
     value: is.String,
-  })
-])
+  }),
+]);
 
 const isMarkupContent = is.ObjectOf({
   kind: is.String,
@@ -75,7 +80,11 @@ const isHover = is.ObjectOf({
   range: as.Optional(isRange),
 });
 
-const requestHover = async (denops: Denops, lspoints: Lspoints, client: Client) => {
+const requestHover = async (
+  denops: Denops,
+  lspoints: Lspoints,
+  client: Client,
+) => {
   const offsetEncoding = client.serverCapabilities
     .positionEncoding as OffsetEncoding;
   const params = await makePositionParams(denops, 0, 0, offsetEncoding);
@@ -88,9 +97,13 @@ const requestHover = async (denops: Denops, lspoints: Lspoints, client: Client) 
     return null;
   }
   return ensure(result, isHover);
-}
+};
 
-const createPopup = async (denops: Denops, content: string, opts: popup.OpenOptions) => {
+const createPopup = async (
+  denops: Denops,
+  content: string,
+  opts: popup.OpenOptions,
+) => {
   const bufnr = await fn.bufadd(denops, "");
   await fn.bufload(denops, bufnr);
 
@@ -104,7 +117,7 @@ const createPopup = async (denops: Denops, content: string, opts: popup.OpenOpti
   await option.number.setWindow(denops, popupWindow.winid, false);
 
   return popupWindow;
-}
+};
 
 export class Extension extends BaseExtension {
   initialize(denops: Denops, lspoints: Lspoints) {
@@ -122,7 +135,11 @@ export class Extension extends BaseExtension {
           return;
         }
 
-        const hovers = (await Promise.all(clients.map(async (client) => await requestHover(denops, lspoints, client)))).filter((x) => x != null);
+        const hovers = (await Promise.all(clients.map(async (client) =>
+          await requestHover(denops, lspoints, client)
+        ))).filter((x) =>
+          x != null
+        );
 
         if (hovers.length === 0) {
           echo(denops, "No hover information");
@@ -148,10 +165,21 @@ export class Extension extends BaseExtension {
           if (isMarkupContent(hover.contents)) {
             return splitLines(hover.contents.value);
           }
-        }).map((lines) => lines?.join("\n") ?? "").join("\n\n");
+        }).map((lines) =>
+          lines?.join("\n") ?? ""
+        ).join("\n\n");
 
-        const width = Math.min(opts.max_width ?? 160, content.split("\n").map((line) => line.length).reduce((a, b) => Math.max(a, b), 0));
-        const height = Math.min(opts.max_height ?? 20, content.split("\n").length);
+        const width = Math.min(
+          opts.max_width ?? 160,
+          content.split("\n").map((line) => line.length).reduce(
+            (a, b) => Math.max(a, b),
+            0,
+          ),
+        );
+        const height = Math.min(
+          opts.max_height ?? 20,
+          content.split("\n").length,
+        );
 
         const window = await createPopup(denops, content, {
           relative: "cursor",
@@ -162,10 +190,16 @@ export class Extension extends BaseExtension {
           zindex: opts.zindex,
           row: opts.offset_y ?? 2,
           col: opts.offset_x ?? 2,
-        })
+        });
 
         const id = lambda.register(denops, window.close, { once: true });
-        await autocmd.define(denops, "CursorMoved", "*", expr`eval(denops#request(${denops.name}, ${id}, []))`, { once: true });
+        await autocmd.define(
+          denops,
+          "CursorMoved",
+          "*",
+          expr`eval(denops#request(${denops.name}, ${id}, []))`,
+          { once: true },
+        );
       },
     });
   }
