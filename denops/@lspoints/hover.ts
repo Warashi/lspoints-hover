@@ -1,16 +1,18 @@
-import {
-  BaseExtension,
-  Lspoints,
-} from "https://deno.land/x/lspoints@v0.0.7/interface.ts";
-import { Denops } from "https://deno.land/x/lspoints@v0.0.7/deps/denops.ts";
-import { LSP } from "https://deno.land/x/lspoints@v0.0.7/deps/lsp.ts";
-import { u } from "https://deno.land/x/lspoints@v0.0.7/deps/unknownutil.ts";
+import { BaseExtension, Client, Lspoints } from "jsr:@kuuote/lspoints@0.1.1";
+import { Denops } from "jsr:@denops/std@7.4.0";
+import { as, ensure, is } from "jsr:@core/unknownutil@4.3.0";
 import {
   makePositionParams,
   OffsetEncoding,
-} from "https://deno.land/x/denops_lsputil@v0.9.5/mod.ts";
-import * as fn from "https://deno.land/x/denops_std@v6.5.1/function/mod.ts";
-import { echo } from "https://deno.land/x/denops_std@v6.5.1/helper/mod.ts";
+} from "jsr:@uga-rosa/denops-lsputil@0.10.1";
+import * as fn from "jsr:@denops/std@7.4.0/function";
+import * as buffer from "jsr:@denops/std@7.4.0/buffer";
+import { echo } from "jsr:@denops/std@7.4.0/helper";
+import * as popup from "jsr:@denops/std@7.4.0/popup";
+import * as autocmd from "jsr:@denops/std@7.4.0/autocmd";
+import * as lambda from "jsr:@denops/std@7.4.0/lambda";
+import { expr } from "jsr:@denops/std@7.4.0/eval";
+import * as option from "jsr:@denops/std@7.4.0/option";
 
 function splitLines(s: string): string[] {
   return s.replaceAll(/\r\n?/g, "\n")
@@ -19,16 +21,103 @@ function splitLines(s: string): string[] {
     .filter(Boolean);
 }
 
-const isOption = u.isOptionalOf(u.isObjectOf({
-  title: u.isOptionalOf(u.isString),
-  border: u.isOptionalOf(u.isString),
-  zindex: u.isOptionalOf(u.isNumber),
-  wrap: u.isOptionalOf(u.isBoolean),
-  max_width: u.isOptionalOf(u.isNumber),
-  max_height: u.isOptionalOf(u.isNumber),
-  offset_x: u.isOptionalOf(u.isNumber),
-  offset_y: u.isOptionalOf(u.isNumber),
+const isBorder = is.UnionOf([
+  is.LiteralOf("single"),
+  is.LiteralOf("double"),
+  is.LiteralOf("rounded"),
+  is.TupleOf([
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+    is.String,
+  ]),
+]);
+
+const isOption = as.Optional(is.ObjectOf({
+  title: as.Optional(is.String),
+  border: as.Optional(isBorder),
+  zindex: as.Optional(is.Number),
+  wrap: as.Optional(is.Boolean),
+  max_width: as.Optional(is.Number),
+  max_height: as.Optional(is.Number),
+  offset_x: as.Optional(is.Number),
+  offset_y: as.Optional(is.Number),
 }));
+
+const isMarkedString = is.UnionOf([
+  is.String,
+  is.ObjectOf({
+    language: is.String,
+    value: is.String,
+  }),
+]);
+
+const isMarkupContent = is.ObjectOf({
+  kind: is.String,
+  value: is.String,
+});
+
+const isPosition = is.ObjectOf({
+  line: is.Number,
+  character: is.Number,
+});
+
+const isRange = is.ObjectOf({
+  start: isPosition,
+  end: isPosition,
+});
+
+const isHover = is.ObjectOf({
+  contents: is.UnionOf([
+    isMarkedString,
+    is.ArrayOf(isMarkedString),
+    isMarkupContent,
+  ]),
+  range: as.Optional(isRange),
+});
+
+const requestHover = async (
+  denops: Denops,
+  lspoints: Lspoints,
+  client: Client,
+) => {
+  const offsetEncoding = client.serverCapabilities
+    .positionEncoding as OffsetEncoding;
+  const params = await makePositionParams(denops, 0, 0, offsetEncoding);
+  const result = await lspoints.request(
+    client.name,
+    "textDocument/hover",
+    params,
+  );
+  if (result == null) {
+    return null;
+  }
+  return ensure(result, isHover);
+};
+
+const createPopup = async (
+  denops: Denops,
+  content: string,
+  opts: popup.OpenOptions,
+) => {
+  const bufnr = await fn.bufadd(denops, "");
+  await fn.bufload(denops, bufnr);
+
+  await buffer.replace(denops, bufnr, content.split("\n"));
+
+  await option.filetype.setBuffer(denops, bufnr, "markdown");
+
+  // Open a popup window showing the buffer
+  const popupWindow = await popup.open(denops, { ...opts, bufnr });
+
+  await option.number.setWindow(denops, popupWindow.winid, false);
+
+  return popupWindow;
+};
 
 export class Extension extends BaseExtension {
   initialize(denops: Denops, lspoints: Lspoints) {
@@ -45,52 +134,100 @@ export class Extension extends BaseExtension {
           echo(denops, "Hover is not supported");
           return;
         }
-        const client = clients[0];
 
-        const offsetEncoding = client.serverCapabilities
-          .positionEncoding as OffsetEncoding;
-        const params = await makePositionParams(denops, 0, 0, offsetEncoding);
-        const result = await lspoints.request(
-          client.name,
-          "textDocument/hover",
-          params,
-        ) as LSP.Hover | null;
-        if (result === null) {
-          echo(denops, "No information");
+        const hovers = (await Promise.all(clients.map(async (client) =>
+          await requestHover(denops, lspoints, client)
+        ))).filter((x) =>
+          x != null
+        );
+
+        if (hovers.length === 0) {
+          echo(denops, "No hover information");
           return;
         }
-        const contents = result.contents;
 
-        const lines: string[] = [];
-        let format = "markdown";
-
-        const parseMarkedString = (ms: LSP.MarkedString) => {
-          if (u.isString(ms)) {
-            lines.push(...splitLines(ms));
-          } else {
-            lines.push("```" + ms.language, ...splitLines(ms.value), "```");
+        const content = hovers.map((hover) => {
+          if (is.Array(hover.contents)) {
+            return hover.contents.map((c) => {
+              if (is.String(c)) {
+                return splitLines(c);
+              } else {
+                return splitLines(c.value);
+              }
+            }).flat();
           }
-        };
-
-        if (u.isString(contents) || "language" in contents) {
-          // MarkedString
-          parseMarkedString(contents);
-        } else if (u.isArray(contents)) {
-          // MarkedString[]
-          contents.forEach(parseMarkedString);
-        } else if ("kind" in contents) {
-          // MarkupContent
-          if (contents.kind === "plaintext") {
-            format = "plaintext";
+          if (isMarkedString(hover.contents)) {
+            if (is.String(hover.contents)) {
+              return splitLines(hover.contents);
+            }
+            return splitLines(hover.contents.value);
           }
-          lines.push(...splitLines(contents.value));
-        }
+          if (isMarkupContent(hover.contents)) {
+            return splitLines(hover.contents.value);
+          }
+        }).map((lines) =>
+          lines?.join("\n") ?? ""
+        ).join("\n\n");
 
-        await denops.call(
-          "luaeval",
-          `vim.lsp.util.open_floating_preview(_A[1], _A[2], _A[3])`,
-          [lines, format, opts ?? {}],
+        const width = Math.min(
+          opts.max_width ?? 160,
+          content.split("\n").map((line) => line.length).reduce(
+            (a, b) => Math.max(a, b),
+            0,
+          ),
         );
+        const height = Math.min(
+          opts.max_height ?? 20,
+          content.split("\n").length,
+        );
+
+        const offset_y = opts.offset_y ?? denops.meta.host == "nvim" ? 2 : 1;
+        const offset_x = opts.offset_x ?? denops.meta.host == "nvim" ? 2 : 1;
+
+        // Calculate the row and col for the popup window
+        // If the host is neovim, the row and col are relative to the cursor position
+        // If the host is vim, the row and col are some string like "cursor+1" or "cursor-1"
+        const row = denops.meta.host ==
+            "nvim"
+          ? offset_y
+          : offset_y >= 0
+          ? `cursor+${offset_y}`
+          : `cursor${offset_y}`;
+        const col = denops.meta.host ==
+            "nvim"
+          ? offset_x
+          : offset_x >= 0
+          ? `cursor+${offset_x}`
+          : `cursor${offset_x}`;
+
+        const window = await createPopup(
+          denops,
+          content,
+          {
+            relative: "cursor",
+            width,
+            height,
+            title: opts.title,
+            border: opts.border,
+            zindex: opts.zindex,
+            // workaround for vim
+            row: row as unknown as number,
+            col: col as unknown as number,
+          } as const satisfies popup.OpenOptions,
+        );
+
+        const id = lambda.register(denops, window.close, { once: true });
+
+        // workaround for vim
+        // without this setTimeout, the popup window will be closed immediately
+        setTimeout(() =>
+          autocmd.define(
+            denops,
+            "CursorMoved",
+            "*",
+            expr`eval(denops#request(${denops.name}, ${id}, []))`,
+            { once: true },
+          ), 100);
       },
     });
   }
